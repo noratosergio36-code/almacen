@@ -1,0 +1,57 @@
+'use client'
+
+import { signOut, useSession } from 'next-auth/react'
+import { Menu, LogOut } from 'lucide-react'
+import { NotificationBell } from './NotificationBell'
+import { usePathname } from 'next/navigation'
+
+const titles: Record<string, string> = {
+  '/dashboard': 'Dashboard',
+  '/almacen': 'Vista del Almacén',
+  '/entradas': 'Entradas',
+  '/salidas': 'Salidas',
+  '/apartados': 'Apartados',
+  '/articulos': 'Catálogo de Artículos',
+  '/ubicaciones': 'Ubicaciones',
+  '/proyectos': 'Proyectos',
+  '/proveedores': 'Proveedores',
+  '/reportes': 'Reportes',
+  '/usuarios': 'Usuarios',
+  '/perfil': 'Mi Perfil',
+}
+
+export function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
+  const pathname = usePathname()
+  const { data: session } = useSession()
+
+  const title = Object.entries(titles).find(([key]) => pathname.startsWith(key))?.[1] ?? 'InventaPro'
+
+  return (
+    <header
+      className="h-14 flex items-center justify-between px-4 gap-4 glass"
+      style={{ borderBottom: '1px solid var(--border)' }}
+    >
+      <div className="flex items-center gap-3">
+        <button
+          onClick={onMenuClick}
+          className="lg:hidden p-2 rounded-md hover:bg-[var(--bg-tertiary)] transition-colors"
+        >
+          <Menu size={18} style={{ color: 'var(--text-secondary)' }} />
+        </button>
+        <h1 className="font-display font-semibold text-base tracking-wide">{title}</h1>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <NotificationBell />
+        <button
+          onClick={() => signOut({ callbackUrl: '/login' })}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-md text-xs transition-colors hover:bg-[var(--bg-tertiary)]"
+          style={{ color: 'var(--text-muted)' }}
+        >
+          <LogOut size={14} />
+          <span className="hidden sm:block">Salir</span>
+        </button>
+      </div>
+    </header>
+  )
+}

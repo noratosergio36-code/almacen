@@ -1,0 +1,264 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Rol {
+  ADMIN
+  ALMACENISTA
+  USUARIO
+}
+
+enum EstadoProyecto {
+  ACTIVO
+  PAUSADO
+  CERRADO
+}
+
+enum EstadoApartado {
+  ACTIVO
+  CONVERTIDO_SALIDA
+  VENCIDO
+  CANCELADO
+}
+
+enum TipoNotificacion {
+  ENTRADA_SIN_PRECIO
+  APARTADO_VENCIMIENTO
+  STOCK_MINIMO
+  NUEVA_ENTRADA
+  NUEVA_SALIDA
+}
+
+model Usuario {
+  id               String   @id @default(cuid())
+  nombre           String
+  email            String   @unique
+  passwordHash     String
+  rol              Rol      @default(USUARIO)
+  activo           Boolean  @default(true)
+  telegramChatId   String?  @unique
+  telegramUsername String?
+  avatarUrl        String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  entradas       Entrada[]
+  salidas        Salida[]
+  apartados      Apartado[]
+  auditLogs      AuditLog[]
+  notificaciones Notificacion[]
+
+  @@index([email])
+  @@index([rol])
+}
+
+model Ubicacion {
+  id          String   @id @default(cuid())
+  nombre      String   @unique
+  descripcion String?
+  qrCode      String?
+  activa      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  articuloUbicaciones ArticuloUbicacion[]
+}
+
+model Proveedor {
+  id        String   @id @default(cuid())
+  nombre    String
+  contacto  String?
+  telefono  String?
+  email     String?
+  notas     String?
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  entradas Entrada[]
+}
+
+model Proyecto {
+  id          String         @id @default(cuid())
+  nombre      String         @unique
+  descripcion String?
+  responsable String?
+  estado      EstadoProyecto @default(ACTIVO)
+  fechaInicio DateTime?
+  fechaCierre DateTime?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  salidas   Salida[]
+  apartados Apartado[]
+}
+
+model Articulo {
+  id          String   @id @default(cuid())
+  nombre      String
+  descripcion String?
+  marca       String?
+  numeroParte String?
+  unidad      String   @default("pza")
+  fotoUrl     String?
+  stockMinimo Int?
+  activo      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  ubicaciones   ArticuloUbicacion[]
+  lotesEntrada  LoteEntrada[]
+  apartadoItems ApartadoItem[]
+
+  @@index([nombre])
+  @@index([marca])
+}
+
+model ArticuloUbicacion {
+  id          String   @id @default(cuid())
+  articuloId  String
+  ubicacionId String
+  cantidad    Int      @default(0)
+  updatedAt   DateTime @updatedAt
+
+  articulo  Articulo  @relation(fields: [articuloId], references: [id])
+  ubicacion Ubicacion @relation(fields: [ubicacionId], references: [id])
+
+  @@unique([articuloId, ubicacionId])
+  @@index([articuloId])
+  @@index([ubicacionId])
+}
+
+model Entrada {
+  id          String    @id @default(cuid())
+  fecha       DateTime  @default(now())
+  usuarioId   String
+  proveedorId String?
+  notas       String?
+  createdAt   DateTime  @default(now())
+
+  usuario   Usuario     @relation(fields: [usuarioId], references: [id])
+  proveedor Proveedor?  @relation(fields: [proveedorId], references: [id])
+  lotes     LoteEntrada[]
+
+  @@index([fecha])
+  @@index([usuarioId])
+}
+
+model LoteEntrada {
+  id                 String   @id @default(cuid())
+  entradaId          String
+  articuloId         String
+  ubicacionId        String?
+  cantidadOriginal   Int
+  cantidadDisponible Int
+  precioUnitario     Float?
+  precioPendiente    Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  entrada       Entrada        @relation(fields: [entradaId], references: [id])
+  articulo      Articulo       @relation(fields: [articuloId], references: [id])
+  salidaItems   SalidaItem[]
+  apartadoItems ApartadoItem[]
+
+  @@index([articuloId])
+  @@index([precioPendiente])
+  @@index([createdAt])
+}
+
+model Salida {
+  id         String    @id @default(cuid())
+  fecha      DateTime  @default(now())
+  usuarioId  String
+  proyectoId String?
+  notas      String?
+  costoTotal Float?
+  createdAt  DateTime  @default(now())
+
+  usuario  Usuario    @relation(fields: [usuarioId], references: [id])
+  proyecto Proyecto?  @relation(fields: [proyectoId], references: [id])
+  items    SalidaItem[]
+
+  @@index([fecha])
+  @@index([proyectoId])
+}
+
+model SalidaItem {
+  id             String  @id @default(cuid())
+  salidaId       String
+  loteEntradaId  String
+  cantidad       Int
+  precioUnitario Float?
+  costoTotal     Float?
+
+  salida      Salida      @relation(fields: [salidaId], references: [id])
+  loteEntrada LoteEntrada @relation(fields: [loteEntradaId], references: [id])
+}
+
+model Apartado {
+  id          String         @id @default(cuid())
+  usuarioId   String
+  proyectoId  String?
+  estado      EstadoApartado @default(ACTIVO)
+  notas       String?
+  fechaExpira DateTime
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  usuario  Usuario    @relation(fields: [usuarioId], references: [id])
+  proyecto Proyecto?  @relation(fields: [proyectoId], references: [id])
+  items    ApartadoItem[]
+
+  @@index([estado])
+  @@index([fechaExpira])
+}
+
+model ApartadoItem {
+  id            String  @id @default(cuid())
+  apartadoId    String
+  articuloId    String
+  loteEntradaId String?
+  cantidad      Int
+
+  apartado    Apartado     @relation(fields: [apartadoId], references: [id])
+  articulo    Articulo     @relation(fields: [articuloId], references: [id])
+  loteEntrada LoteEntrada? @relation(fields: [loteEntradaId], references: [id])
+}
+
+model Notificacion {
+  id        String           @id @default(cuid())
+  usuarioId String
+  tipo      TipoNotificacion
+  titulo    String
+  mensaje   String
+  leida     Boolean          @default(false)
+  metadata  Json?
+  createdAt DateTime         @default(now())
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id])
+
+  @@index([usuarioId, leida])
+  @@index([createdAt])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  usuarioId String?
+  accion    String
+  entidad   String
+  entidadId String?
+  detalle   Json?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  usuario Usuario? @relation(fields: [usuarioId], references: [id])
+
+  @@index([usuarioId])
+  @@index([entidad, entidadId])
+  @@index([createdAt])
+}
