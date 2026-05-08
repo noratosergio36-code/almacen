@@ -8,7 +8,7 @@ CREATE TYPE "EstadoProyecto" AS ENUM ('ACTIVO', 'PAUSADO', 'CERRADO');
 CREATE TYPE "EstadoApartado" AS ENUM ('ACTIVO', 'CONVERTIDO_SALIDA', 'VENCIDO', 'CANCELADO');
 
 -- CreateEnum
-CREATE TYPE "TipoNotificacion" AS ENUM ('ENTRADA_SIN_PRECIO', 'APARTADO_VENCIMIENTO', 'STOCK_MINIMO', 'NUEVA_ENTRADA', 'NUEVA_SALIDA');
+CREATE TYPE "TipoNotificacion" AS ENUM ('ENTRADA_SIN_PRECIO', 'APARTADO_VENCIMIENTO', 'STOCK_MINIMO', 'NUEVA_ENTRADA', 'NUEVA_SALIDA', 'MOVIMIENTO_COMPONENTE');
 
 -- CreateTable
 CREATE TABLE "Usuario" (
@@ -34,10 +34,36 @@ CREATE TABLE "Ubicacion" (
     "descripcion" TEXT,
     "qrCode" TEXT,
     "activa" BOOLEAN NOT NULL DEFAULT true,
+    "nivelesCount" INTEGER NOT NULL DEFAULT 1,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "Ubicacion_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "Nivel" (
+    "id" TEXT NOT NULL,
+    "ubicacionId" TEXT NOT NULL,
+    "nombre" TEXT NOT NULL,
+    "numero" INTEGER NOT NULL,
+    "descripcion" TEXT,
+    "activo" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Nivel_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "ArticuloNivel" (
+    "id" TEXT NOT NULL,
+    "nivelId" TEXT NOT NULL,
+    "articuloId" TEXT NOT NULL,
+    "cantidad" INTEGER NOT NULL DEFAULT 0,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "ArticuloNivel_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -103,7 +129,7 @@ CREATE TABLE "Entrada" (
     "id" TEXT NOT NULL,
     "fecha" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "usuarioId" TEXT NOT NULL,
-    "proveedorId" TEXT,
+    "proveedorNombre" TEXT,
     "notas" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -116,6 +142,7 @@ CREATE TABLE "LoteEntrada" (
     "entradaId" TEXT NOT NULL,
     "articuloId" TEXT NOT NULL,
     "ubicacionId" TEXT,
+    "nivelId" TEXT,
     "cantidadOriginal" INTEGER NOT NULL,
     "cantidadDisponible" INTEGER NOT NULL,
     "precioUnitario" DOUBLE PRECISION,
@@ -204,128 +231,101 @@ CREATE TABLE "AuditLog" (
     CONSTRAINT "AuditLog_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "Movimiento" (
+    "id" TEXT NOT NULL,
+    "articuloId" TEXT NOT NULL,
+    "nivelOrigenId" TEXT NOT NULL,
+    "nivelDestinoId" TEXT NOT NULL,
+    "cantidadMovida" INTEGER NOT NULL,
+    "usuarioId" TEXT NOT NULL,
+    "notas" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Movimiento_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "Usuario_email_key" ON "Usuario"("email");
-
--- CreateIndex
 CREATE UNIQUE INDEX "Usuario_telegramChatId_key" ON "Usuario"("telegramChatId");
-
--- CreateIndex
 CREATE INDEX "Usuario_email_idx" ON "Usuario"("email");
-
--- CreateIndex
 CREATE INDEX "Usuario_rol_idx" ON "Usuario"("rol");
 
--- CreateIndex
 CREATE UNIQUE INDEX "Ubicacion_nombre_key" ON "Ubicacion"("nombre");
 
--- CreateIndex
+CREATE UNIQUE INDEX "Nivel_ubicacionId_numero_key" ON "Nivel"("ubicacionId", "numero");
+CREATE INDEX "Nivel_ubicacionId_idx" ON "Nivel"("ubicacionId");
+
+CREATE UNIQUE INDEX "ArticuloNivel_nivelId_articuloId_key" ON "ArticuloNivel"("nivelId", "articuloId");
+CREATE INDEX "ArticuloNivel_nivelId_idx" ON "ArticuloNivel"("nivelId");
+CREATE INDEX "ArticuloNivel_articuloId_idx" ON "ArticuloNivel"("articuloId");
+
 CREATE UNIQUE INDEX "Proyecto_nombre_key" ON "Proyecto"("nombre");
 
--- CreateIndex
 CREATE INDEX "Articulo_nombre_idx" ON "Articulo"("nombre");
-
--- CreateIndex
 CREATE INDEX "Articulo_marca_idx" ON "Articulo"("marca");
 
--- CreateIndex
+CREATE UNIQUE INDEX "ArticuloUbicacion_articuloId_ubicacionId_key" ON "ArticuloUbicacion"("articuloId", "ubicacionId");
 CREATE INDEX "ArticuloUbicacion_articuloId_idx" ON "ArticuloUbicacion"("articuloId");
-
--- CreateIndex
 CREATE INDEX "ArticuloUbicacion_ubicacionId_idx" ON "ArticuloUbicacion"("ubicacionId");
 
--- CreateIndex
-CREATE UNIQUE INDEX "ArticuloUbicacion_articuloId_ubicacionId_key" ON "ArticuloUbicacion"("articuloId", "ubicacionId");
-
--- CreateIndex
 CREATE INDEX "Entrada_fecha_idx" ON "Entrada"("fecha");
-
--- CreateIndex
 CREATE INDEX "Entrada_usuarioId_idx" ON "Entrada"("usuarioId");
 
--- CreateIndex
 CREATE INDEX "LoteEntrada_articuloId_idx" ON "LoteEntrada"("articuloId");
-
--- CreateIndex
 CREATE INDEX "LoteEntrada_precioPendiente_idx" ON "LoteEntrada"("precioPendiente");
-
--- CreateIndex
 CREATE INDEX "LoteEntrada_createdAt_idx" ON "LoteEntrada"("createdAt");
+CREATE INDEX "LoteEntrada_nivelId_idx" ON "LoteEntrada"("nivelId");
 
--- CreateIndex
 CREATE INDEX "Salida_fecha_idx" ON "Salida"("fecha");
-
--- CreateIndex
 CREATE INDEX "Salida_proyectoId_idx" ON "Salida"("proyectoId");
 
--- CreateIndex
 CREATE INDEX "Apartado_estado_idx" ON "Apartado"("estado");
-
--- CreateIndex
 CREATE INDEX "Apartado_fechaExpira_idx" ON "Apartado"("fechaExpira");
 
--- CreateIndex
 CREATE INDEX "Notificacion_usuarioId_leida_idx" ON "Notificacion"("usuarioId", "leida");
-
--- CreateIndex
 CREATE INDEX "Notificacion_createdAt_idx" ON "Notificacion"("createdAt");
 
--- CreateIndex
 CREATE INDEX "AuditLog_usuarioId_idx" ON "AuditLog"("usuarioId");
-
--- CreateIndex
 CREATE INDEX "AuditLog_entidad_entidadId_idx" ON "AuditLog"("entidad", "entidadId");
-
--- CreateIndex
 CREATE INDEX "AuditLog_createdAt_idx" ON "AuditLog"("createdAt");
 
--- AddForeignKey
-ALTER TABLE "ArticuloUbicacion" ADD CONSTRAINT "ArticuloUbicacion_articuloId_fkey" FOREIGN KEY ("articuloId") REFERENCES "Articulo"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+CREATE INDEX "Movimiento_articuloId_idx" ON "Movimiento"("articuloId");
+CREATE INDEX "Movimiento_createdAt_idx" ON "Movimiento"("createdAt");
+CREATE INDEX "Movimiento_usuarioId_idx" ON "Movimiento"("usuarioId");
 
 -- AddForeignKey
+ALTER TABLE "Nivel" ADD CONSTRAINT "Nivel_ubicacionId_fkey" FOREIGN KEY ("ubicacionId") REFERENCES "Ubicacion"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+ALTER TABLE "ArticuloNivel" ADD CONSTRAINT "ArticuloNivel_nivelId_fkey" FOREIGN KEY ("nivelId") REFERENCES "Nivel"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "ArticuloNivel" ADD CONSTRAINT "ArticuloNivel_articuloId_fkey" FOREIGN KEY ("articuloId") REFERENCES "Articulo"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+ALTER TABLE "ArticuloUbicacion" ADD CONSTRAINT "ArticuloUbicacion_articuloId_fkey" FOREIGN KEY ("articuloId") REFERENCES "Articulo"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 ALTER TABLE "ArticuloUbicacion" ADD CONSTRAINT "ArticuloUbicacion_ubicacionId_fkey" FOREIGN KEY ("ubicacionId") REFERENCES "Ubicacion"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
 ALTER TABLE "Entrada" ADD CONSTRAINT "Entrada_usuarioId_fkey" FOREIGN KEY ("usuarioId") REFERENCES "Usuario"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
-ALTER TABLE "Entrada" ADD CONSTRAINT "Entrada_proveedorId_fkey" FOREIGN KEY ("proveedorId") REFERENCES "Proveedor"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "LoteEntrada" ADD CONSTRAINT "LoteEntrada_entradaId_fkey" FOREIGN KEY ("entradaId") REFERENCES "Entrada"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "LoteEntrada" ADD CONSTRAINT "LoteEntrada_articuloId_fkey" FOREIGN KEY ("articuloId") REFERENCES "Articulo"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
 ALTER TABLE "Salida" ADD CONSTRAINT "Salida_usuarioId_fkey" FOREIGN KEY ("usuarioId") REFERENCES "Usuario"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "Salida" ADD CONSTRAINT "Salida_proyectoId_fkey" FOREIGN KEY ("proyectoId") REFERENCES "Proyecto"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
--- AddForeignKey
 ALTER TABLE "SalidaItem" ADD CONSTRAINT "SalidaItem_salidaId_fkey" FOREIGN KEY ("salidaId") REFERENCES "Salida"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "SalidaItem" ADD CONSTRAINT "SalidaItem_loteEntradaId_fkey" FOREIGN KEY ("loteEntradaId") REFERENCES "LoteEntrada"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
 ALTER TABLE "Apartado" ADD CONSTRAINT "Apartado_usuarioId_fkey" FOREIGN KEY ("usuarioId") REFERENCES "Usuario"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "Apartado" ADD CONSTRAINT "Apartado_proyectoId_fkey" FOREIGN KEY ("proyectoId") REFERENCES "Proyecto"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
--- AddForeignKey
 ALTER TABLE "ApartadoItem" ADD CONSTRAINT "ApartadoItem_apartadoId_fkey" FOREIGN KEY ("apartadoId") REFERENCES "Apartado"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "ApartadoItem" ADD CONSTRAINT "ApartadoItem_articuloId_fkey" FOREIGN KEY ("articuloId") REFERENCES "Articulo"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "ApartadoItem" ADD CONSTRAINT "ApartadoItem_loteEntradaId_fkey" FOREIGN KEY ("loteEntradaId") REFERENCES "LoteEntrada"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
--- AddForeignKey
 ALTER TABLE "Notificacion" ADD CONSTRAINT "Notificacion_usuarioId_fkey" FOREIGN KEY ("usuarioId") REFERENCES "Usuario"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
--- AddForeignKey
 ALTER TABLE "AuditLog" ADD CONSTRAINT "AuditLog_usuarioId_fkey" FOREIGN KEY ("usuarioId") REFERENCES "Usuario"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+ALTER TABLE "Movimiento" ADD CONSTRAINT "Movimiento_articuloId_fkey" FOREIGN KEY ("articuloId") REFERENCES "Articulo"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Movimiento" ADD CONSTRAINT "Movimiento_nivelOrigenId_fkey" FOREIGN KEY ("nivelOrigenId") REFERENCES "Nivel"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Movimiento" ADD CONSTRAINT "Movimiento_nivelDestinoId_fkey" FOREIGN KEY ("nivelDestinoId") REFERENCES "Nivel"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Movimiento" ADD CONSTRAINT "Movimiento_usuarioId_fkey" FOREIGN KEY ("usuarioId") REFERENCES "Usuario"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
