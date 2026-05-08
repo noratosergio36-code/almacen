@@ -45,11 +45,11 @@ export async function GET() {
     }),
     prisma.proyecto.count({ where: { estado: 'ACTIVO' } }),
     prisma.$queryRaw`
-      SELECT DATE("fecha") as dia, COUNT(*) as total, 'ENTRADA' as tipo
+      SELECT DATE("fecha") as dia, COUNT(*)::int as total, 'ENTRADA' as tipo
       FROM "Entrada" WHERE "fecha" >= ${subDays(ahora, 30)}
       GROUP BY DATE("fecha")
       UNION ALL
-      SELECT DATE("fecha") as dia, COUNT(*) as total, 'SALIDA' as tipo
+      SELECT DATE("fecha") as dia, COUNT(*)::int as total, 'SALIDA' as tipo
       FROM "Salida" WHERE "fecha" >= ${subDays(ahora, 30)}
       GROUP BY DATE("fecha")
       ORDER BY dia ASC

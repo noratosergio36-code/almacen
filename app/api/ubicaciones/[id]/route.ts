@@ -22,12 +22,12 @@ export async function DELETE(_: Request, { params }: { params: { id: string } })
   if (error) return error
   if (rol !== Rol.ADMIN) return errorResponse('Sin permiso', 'FORBIDDEN', 403)
 
-  const count = await prisma.articuloUbicacion.count({
-    where: { ubicacionId: params.id, cantidad: { gt: 0 } },
+  const count = await prisma.articuloNivel.count({
+    where: { nivel: { ubicacionId: params.id }, cantidad: { gt: 0 } },
   })
 
   if (count > 0) {
-    return errorResponse('No se puede eliminar una ubicación con artículos', 'UBICACION_CON_STOCK', 409)
+    return errorResponse('No se puede eliminar una ubicación con artículos en sus niveles', 'UBICACION_CON_STOCK', 409)
   }
 
   await prisma.ubicacion.update({ where: { id: params.id }, data: { activa: false } })

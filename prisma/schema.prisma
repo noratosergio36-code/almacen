@@ -31,6 +31,7 @@ enum TipoNotificacion {
   STOCK_MINIMO
   NUEVA_ENTRADA
   NUEVA_SALIDA
+  MOVIMIENTO_COMPONENTE
 }
 
 model Usuario {
@@ -51,21 +52,58 @@ model Usuario {
   apartados      Apartado[]
   auditLogs      AuditLog[]
   notificaciones Notificacion[]
+  movimientos    Movimiento[]
 
   @@index([email])
   @@index([rol])
 }
 
 model Ubicacion {
+  id           String   @id @default(cuid())
+  nombre       String   @unique
+  descripcion  String?
+  qrCode       String?
+  activa       Boolean  @default(true)
+  nivelesCount Int      @default(1)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  articuloUbicaciones ArticuloUbicacion[]
+  niveles             Nivel[]
+}
+
+model Nivel {
   id          String   @id @default(cuid())
-  nombre      String   @unique
+  ubicacionId String
+  nombre      String
+  numero      Int
   descripcion String?
-  qrCode      String?
-  activa      Boolean  @default(true)
+  activo      Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  articuloUbicaciones ArticuloUbicacion[]
+  ubicacion          Ubicacion       @relation(fields: [ubicacionId], references: [id], onDelete: Cascade)
+  articuloNiveles    ArticuloNivel[]
+  movimientosOrigen  Movimiento[]    @relation("MovimientoOrigen")
+  movimientosDestino Movimiento[]    @relation("MovimientoDestino")
+
+  @@unique([ubicacionId, numero])
+  @@index([ubicacionId])
+}
+
+model ArticuloNivel {
+  id         String   @id @default(cuid())
+  nivelId    String
+  articuloId String
+  cantidad   Int      @default(0)
+  updatedAt  DateTime @updatedAt
+
+  nivel    Nivel    @relation(fields: [nivelId], references: [id])
+  articulo Articulo @relation(fields: [articuloId], references: [id])
+
+  @@unique([nivelId, articuloId])
+  @@index([nivelId])
+  @@index([articuloId])
 }
 
 model Proveedor {
@@ -78,8 +116,6 @@ model Proveedor {
   activo    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  entradas Entrada[]
 }
 
 model Proyecto {
@@ -110,9 +146,11 @@ model Articulo {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  ubicaciones   ArticuloUbicacion[]
-  lotesEntrada  LoteEntrada[]
-  apartadoItems ApartadoItem[]
+  ubicaciones     ArticuloUbicacion[]
+  articuloNiveles ArticuloNivel[]
+  lotesEntrada    LoteEntrada[]
+  apartadoItems   ApartadoItem[]
+  movimientos     Movimiento[]
 
   @@index([nombre])
   @@index([marca])
@@ -134,16 +172,15 @@ model ArticuloUbicacion {
 }
 
 model Entrada {
-  id          String    @id @default(cuid())
-  fecha       DateTime  @default(now())
-  usuarioId   String
-  proveedorId String?
-  notas       String?
-  createdAt   DateTime  @default(now())
+  id              String    @id @default(cuid())
+  fecha           DateTime  @default(now())
+  usuarioId       String
+  proveedorNombre String?
+  notas           String?
+  createdAt       DateTime  @default(now())
 
-  usuario   Usuario     @relation(fields: [usuarioId], references: [id])
-  proveedor Proveedor?  @relation(fields: [proveedorId], references: [id])
-  lotes     LoteEntrada[]
+  usuario Usuario       @relation(fields: [usuarioId], references: [id])
+  lotes   LoteEntrada[]
 
   @@index([fecha])
   @@index([usuarioId])
@@ -154,6 +191,7 @@ model LoteEntrada {
   entradaId          String
   articuloId         String
   ubicacionId        String?
+  nivelId            String?
   cantidadOriginal   Int
   cantidadDisponible Int
   precioUnitario     Float?
@@ -169,6 +207,7 @@ model LoteEntrada {
   @@index([articuloId])
   @@index([precioPendiente])
   @@index([createdAt])
+  @@index([nivelId])
 }
 
 model Salida {
@@ -261,4 +300,24 @@ model AuditLog {
   @@index([usuarioId])
   @@index([entidad, entidadId])
   @@index([createdAt])
+}
+
+model Movimiento {
+  id             String   @id @default(cuid())
+  articuloId     String
+  nivelOrigenId  String
+  nivelDestinoId String
+  cantidadMovida Int
+  usuarioId      String
+  notas          String?
+  createdAt      DateTime @default(now())
+
+  articulo     Articulo @relation(fields: [articuloId],     references: [id])
+  nivelOrigen  Nivel    @relation("MovimientoOrigen",  fields: [nivelOrigenId],  references: [id])
+  nivelDestino Nivel    @relation("MovimientoDestino", fields: [nivelDestinoId], references: [id])
+  usuario      Usuario  @relation(fields: [usuarioId],      references: [id])
+
+  @@index([articuloId])
+  @@index([createdAt])
+  @@index([usuarioId])
 }

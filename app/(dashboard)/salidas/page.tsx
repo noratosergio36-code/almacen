@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { SkeletonTable } from '@/components/ui/Skeleton'
 import { formatDate, formatCurrency } from '@/lib/utils'
-import { Plus } from 'lucide-react'
+import { Plus, Upload } from 'lucide-react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
+import { CSVUploader } from '@/components/csv/CSVUploader'
 
 interface Salida {
   id: string
@@ -21,6 +22,7 @@ interface Salida {
 export default function SalidasPage() {
   const [salidas, setSalidas] = useState<Salida[]>([])
   const [loading, setLoading] = useState(true)
+  const [csvOpen, setCsvOpen] = useState(false)
 
   const fetch_ = useCallback(async () => {
     const res = await fetch('/api/salidas?limit=50')
@@ -37,10 +39,19 @@ export default function SalidasPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <h2 className="font-display text-lg font-semibold">Registro de salidas</h2>
-        <Link href="/salidas/nueva">
-          <Button size="sm"><Plus size={14} /> Nueva salida</Button>
-        </Link>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => setCsvOpen(true)}>
+            <Upload size={14} /> Cargar CSV
+          </Button>
+          <Link href="/salidas/nueva">
+            <Button size="sm"><Plus size={14} /> Nueva salida</Button>
+          </Link>
+        </div>
       </div>
+
+      {csvOpen && (
+        <CSVUploader tipo="salida" onProcesado={fetch_} onClose={() => setCsvOpen(false)} />
+      )}
 
       {loading ? <SkeletonTable /> : (
         <div className="card-industrial overflow-hidden">

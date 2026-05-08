@@ -17,14 +17,26 @@ import { Plus, Search } from 'lucide-react'
 
 type UbicacionForm = z.infer<typeof UbicacionSchema>
 
+interface ArticuloNivel {
+  cantidad: number
+  apartadoReservado: number
+  articulo: { id: string; nombre: string; marca?: string | null; fotoUrl?: string | null; unidad: string }
+}
+
+interface Nivel {
+  id: string
+  nombre: string
+  numero: number
+  articuloNiveles: ArticuloNivel[]
+}
+
 interface Ubicacion {
   id: string
   nombre: string
   descripcion?: string | null
-  articuloUbicaciones: Array<{
-    cantidad: number
-    articulo: { id: string; nombre: string; marca?: string | null; fotoUrl?: string | null; unidad: string }
-  }>
+  totalArticulos: number
+  totalStock: number
+  niveles: Nivel[]
 }
 
 export default function AlmacenPage() {
@@ -125,7 +137,11 @@ export default function AlmacenPage() {
             {items.map((u, i) => (
               <UbicacionCard
                 key={u.id}
-                {...u}
+                id={u.id}
+                nombre={u.nombre}
+                descripcion={u.descripcion}
+                totalArticulos={u.totalArticulos}
+                totalStock={u.totalStock}
                 onClick={() => setSelected(u)}
                 index={i}
               />
@@ -144,6 +160,7 @@ export default function AlmacenPage() {
         ubicacion={selected}
         open={!!selected}
         onClose={() => setSelected(null)}
+        onRefresh={fetchUbicaciones}
       />
 
       <Modal open={showForm} onClose={() => setShowForm(false)} title="Nueva ubicación" size="sm">

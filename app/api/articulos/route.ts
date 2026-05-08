@@ -22,22 +22,37 @@ export async function GET(req: Request) {
     ]} : {}),
   }
 
-  const [articulos, total] = await Promise.all([
+  const [articulos, total, apartadosActivos] = await Promise.all([
     prisma.articulo.findMany({
       where,
       skip,
       take: limit,
       orderBy: { nombre: 'asc' },
       include: {
-        ubicaciones: { include: { ubicacion: true } },
         lotesEntrada: { where: { cantidadDisponible: { gt: 0 } }, select: { cantidadDisponible: true } },
-        _count: { select: { apartadoItems: true } },
+        articuloNiveles: {
+          where: { cantidad: { gt: 0 } },
+          include: { nivel: { select: { nombre: true, ubicacion: { select: { nombre: true } } } } },
+        },
       },
     }),
     prisma.articulo.count({ where }),
+    prisma.apartadoItem.groupBy({
+      by: ['articuloId'],
+      where: { apartado: { estado: 'ACTIVO' } },
+      _sum: { cantidad: true },
+    }),
   ])
 
-  return successResponse({ articulos, total, page: Math.ceil(skip / limit) + 1, limit })
+  const reservadoMap = new Map(apartadosActivos.map(a => [a.articuloId, a._sum.cantidad ?? 0]))
+
+  const result = articulos.map(a => ({
+    ...a,
+    apartadoReservado: reservadoMap.get(a.id) ?? 0,
+    ubicaciones: a.articuloNiveles.map(an => `${an.nivel.ubicacion.nombre}-${an.nivel.nombre}`),
+  }))
+
+  return successResponse({ articulos: result, total, page: Math.ceil(skip / limit) + 1, limit })
 }
 
 export async function POST(req: Request) {

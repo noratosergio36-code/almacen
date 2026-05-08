@@ -1,14 +1,15 @@
 import { cn } from '@/lib/utils'
 
-type BadgeVariant = 'default' | 'success' | 'warning' | 'danger' | 'purple' | 'cyan'
+type BadgeVariant = 'default' | 'success' | 'warning' | 'danger' | 'purple' | 'cyan' | 'info'
 
 const variants: Record<BadgeVariant, string> = {
   default: 'bg-[var(--bg-tertiary)] text-[var(--text-secondary)] border-[var(--border)]',
-  success: 'bg-[#00E67620] text-[var(--accent-success)] border-[#00E67640]',
-  warning: 'bg-[#FFB30020] text-[var(--accent-warning)] border-[#FFB30040]',
-  danger: 'bg-[#FF3D5720] text-[var(--accent-danger)] border-[#FF3D5740]',
-  purple: 'bg-[#7C4DFF20] text-[var(--accent-purple)] border-[#7C4DFF40]',
-  cyan: 'bg-[#00D4FF20] text-[var(--accent-primary)] border-[#00D4FF40]',
+  success: 'badge-success',
+  warning: 'badge-warning',
+  danger:  'badge-danger',
+  purple:  'badge-purple',
+  cyan:    'badge-cyan',
+  info:    'badge-info',
 }
 
 export function Badge({

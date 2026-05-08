@@ -8,19 +8,36 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
   const { error } = await requireAuth()
   if (error) return error
 
-  const articulo = await prisma.articulo.findUnique({
-    where: { id: params.id },
-    include: {
-      ubicaciones: { include: { ubicacion: true } },
-      lotesEntrada: {
-        orderBy: { createdAt: 'asc' },
-        include: { entrada: { include: { usuario: true, proveedor: true } } },
+  const [articulo, apartadoReservado] = await Promise.all([
+    prisma.articulo.findUnique({
+      where: { id: params.id },
+      include: {
+        articuloNiveles: { include: { nivel: { include: { ubicacion: true } } } },
+        lotesEntrada: {
+          orderBy: { createdAt: 'asc' },
+          include: { entrada: { include: { usuario: true } } },
+        },
+        movimientos: {
+          orderBy: { createdAt: 'desc' },
+          take: 50,
+          include: {
+            nivelOrigen:  { select: { nombre: true, ubicacion: { select: { nombre: true } } } },
+            nivelDestino: { select: { nombre: true, ubicacion: { select: { nombre: true } } } },
+            usuario: { select: { nombre: true } },
+          },
+        },
       },
-    },
-  })
+    }),
+    prisma.apartadoItem.aggregate({
+      where: { articuloId: params.id, apartado: { estado: 'ACTIVO' } },
+      _sum: { cantidad: true },
+    }),
+  ])
 
-  if (!articulo) return errorResponse('Artículo no encontrado', 'NOT_FOUND', 404)
-  return successResponse(articulo)
+  const result = articulo ? { ...articulo, apartadoReservado: apartadoReservado._sum.cantidad ?? 0 } : null
+
+  if (!result) return errorResponse('Artículo no encontrado', 'NOT_FOUND', 404)
+  return successResponse(result)
 }
 
 export async function PUT(req: Request, { params }: { params: { id: string } }) {

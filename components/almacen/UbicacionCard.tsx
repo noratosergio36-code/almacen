@@ -4,25 +4,18 @@ import { motion } from 'framer-motion'
 import { StatusLED } from '@/components/ui/StatusLED'
 import { MapPin } from 'lucide-react'
 
-interface ArticuloUbicacion {
-  articulo: { id: string; nombre: string }
-  cantidad: number
-}
-
 interface UbicacionCardProps {
   id: string
   nombre: string
   descripcion?: string | null
-  articuloUbicaciones: ArticuloUbicacion[]
+  totalArticulos: number
+  totalStock: number
   onClick: () => void
   index?: number
 }
 
-export function UbicacionCard({ id, nombre, descripcion, articuloUbicaciones, onClick, index = 0 }: UbicacionCardProps) {
-  const totalArticulos = articuloUbicaciones.length
-  const totalUnidades = articuloUbicaciones.reduce((s, a) => s + a.cantidad, 0)
-
-  const ledStatus = totalUnidades === 0 ? 'danger' : totalUnidades < 5 ? 'warning' : 'ok'
+export function UbicacionCard({ nombre, descripcion, totalArticulos, totalStock, onClick, index = 0 }: UbicacionCardProps) {
+  const ledStatus = totalStock === 0 ? 'danger' : totalStock < 5 ? 'warning' : 'ok'
 
   return (
     <motion.button
@@ -56,7 +49,7 @@ export function UbicacionCard({ id, nombre, descripcion, articuloUbicaciones, on
         <div className="rounded p-2" style={{ background: 'var(--bg-tertiary)' }}>
           <p className="text-xs" style={{ color: 'var(--text-muted)' }}>Unidades</p>
           <p className="font-mono-data text-sm font-bold" style={{ color: 'var(--accent-primary)' }}>
-            {totalUnidades}
+            {totalStock}
           </p>
         </div>
       </div>

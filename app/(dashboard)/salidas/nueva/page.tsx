@@ -62,7 +62,7 @@ export default function NuevaSalidaPage() {
 
   return (
     <div className="max-w-2xl space-y-5">
-      <div className="p-4 rounded-lg border" style={{ background: 'rgba(255,179,0,0.08)', borderColor: 'var(--accent-warning)' }}>
+      <div className="p-4 rounded-lg border" style={{ background: 'color-mix(in srgb, var(--accent-warning) 8%, transparent)', borderColor: 'var(--accent-warning)' }}>
         <div className="flex items-center gap-2 mb-1">
           <AlertTriangle size={14} style={{ color: 'var(--accent-warning)' }} />
           <p className="text-sm font-medium" style={{ color: 'var(--accent-warning)' }}>

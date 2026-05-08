@@ -1,4 +1,4 @@
-﻿export const dynamic = 'force-dynamic'
+export const dynamic = 'force-dynamic'
 import { prisma } from '@/lib/prisma'
 import { requireAuth, getPaginationParams } from '@/lib/apiHelpers'
 import { EntradaSchema } from '@/lib/validations'
@@ -34,7 +34,6 @@ export async function GET(req: Request) {
       orderBy: { fecha: 'desc' },
       include: {
         usuario: { select: { id: true, nombre: true } },
-        proveedor: { select: { id: true, nombre: true } },
         lotes: { include: { articulo: { select: { id: true, nombre: true, unidad: true } } } },
       },
     }),
@@ -53,11 +52,11 @@ export async function POST(req: Request) {
   const parsed = EntradaSchema.safeParse(body)
   if (!parsed.success) return errorResponse(parsed.error.issues[0].message, 'VALIDATION_ERROR')
 
-  const { proveedorId, notas, lotes } = parsed.data
+  const { proveedorNombre, notas, lotes } = parsed.data
 
   const entrada = await prisma.$transaction(async (tx) => {
     const entrada = await tx.entrada.create({
-      data: { usuarioId: userId!, proveedorId, notas },
+      data: { usuarioId: userId!, proveedorNombre, notas },
     })
 
     for (const lote of lotes) {
@@ -66,13 +65,20 @@ export async function POST(req: Request) {
           entradaId: entrada.id,
           articuloId: lote.articuloId,
           ubicacionId: lote.ubicacionId,
+          nivelId: lote.nivelId,
           cantidadOriginal: lote.cantidadOriginal,
           cantidadDisponible: lote.cantidadOriginal,
           precioPendiente: true,
         },
       })
 
-      if (lote.ubicacionId) {
+      if (lote.nivelId) {
+        await tx.articuloNivel.upsert({
+          where: { nivelId_articuloId: { nivelId: lote.nivelId, articuloId: lote.articuloId } },
+          create: { nivelId: lote.nivelId, articuloId: lote.articuloId, cantidad: lote.cantidadOriginal },
+          update: { cantidad: { increment: lote.cantidadOriginal } },
+        })
+      } else if (lote.ubicacionId) {
         await tx.articuloUbicacion.upsert({
           where: { articuloId_ubicacionId: { articuloId: lote.articuloId, ubicacionId: lote.ubicacionId } },
           create: { articuloId: lote.articuloId, ubicacionId: lote.ubicacionId, cantidad: lote.cantidadOriginal },
@@ -89,4 +95,3 @@ export async function POST(req: Request) {
 
   return successResponse(entrada, 201)
 }
-

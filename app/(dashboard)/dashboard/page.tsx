@@ -91,7 +91,7 @@ export default function DashboardPage() {
       {/* Alerta de lotes sin precio */}
       {kpis.lotesSinPrecio > 0 && (
         <div className="flex items-center justify-between p-4 rounded-lg border"
-          style={{ background: 'rgba(255,179,0,0.08)', borderColor: 'var(--accent-warning)' }}>
+          style={{ background: 'color-mix(in srgb, var(--accent-warning) 8%, transparent)', borderColor: 'var(--accent-warning)' }}>
           <div className="flex items-center gap-3">
             <ArrowDownToLine size={18} style={{ color: 'var(--accent-warning)' }} />
             <div>

@@ -3,6 +3,7 @@
 import { signOut, useSession } from 'next-auth/react'
 import { Menu, LogOut } from 'lucide-react'
 import { NotificationBell } from './NotificationBell'
+import { ThemeToggle } from '@/components/theme/ThemeToggle'
 import { usePathname } from 'next/navigation'
 
 const titles: Record<string, string> = {
@@ -28,8 +29,8 @@ export function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
 
   return (
     <header
-      className="h-14 flex items-center justify-between px-4 gap-4 glass"
-      style={{ borderBottom: '1px solid var(--border)' }}
+      className="h-14 flex items-center justify-between px-4 gap-4 flex-shrink-0"
+      style={{ background: 'var(--topbar-bg)', borderBottom: '1px solid var(--topbar-border)' }}
     >
       <div className="flex items-center gap-3">
         <button
@@ -42,6 +43,7 @@ export function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
       </div>
 
       <div className="flex items-center gap-2">
+        <ThemeToggle />
         <NotificationBell />
         <button
           onClick={() => signOut({ callbackUrl: '/login' })}

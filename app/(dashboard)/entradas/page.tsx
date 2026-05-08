@@ -4,16 +4,17 @@ import { useEffect, useState, useCallback } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { SkeletonTable } from '@/components/ui/Skeleton'
-import { formatDate, formatCurrency } from '@/lib/utils'
-import { Plus, AlertCircle } from 'lucide-react'
+import { CSVUploader } from '@/components/csv/CSVUploader'
+import { formatDate } from '@/lib/utils'
+import { Plus, AlertCircle, Upload } from 'lucide-react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 
 interface Entrada {
   id: string
   fecha: string
+  proveedorNombre?: string | null
   usuario: { nombre: string }
-  proveedor?: { nombre: string } | null
   lotes: Array<{
     id: string
     articuloId: string
@@ -26,6 +27,7 @@ interface Entrada {
 export default function EntradasPage() {
   const [entradas, setEntradas] = useState<Entrada[]>([])
   const [loading, setLoading] = useState(true)
+  const [csvOpen, setCsvOpen] = useState(false)
 
   const fetchEntradas = useCallback(async () => {
     const res = await fetch('/api/entradas?limit=50')
@@ -42,10 +44,19 @@ export default function EntradasPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <h2 className="font-display text-lg font-semibold">Registro de entradas</h2>
-        <Link href="/entradas/nueva">
-          <Button size="sm"><Plus size={14} /> Nueva entrada</Button>
-        </Link>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => setCsvOpen(true)}>
+            <Upload size={14} /> Cargar CSV
+          </Button>
+          <Link href="/entradas/nueva">
+            <Button size="sm"><Plus size={14} /> Nueva entrada</Button>
+          </Link>
+        </div>
       </div>
+
+      {csvOpen && (
+        <CSVUploader tipo="entrada" onProcesado={fetchEntradas} onClose={() => setCsvOpen(false)} />
+      )}
 
       {loading ? (
         <SkeletonTable />
@@ -86,7 +97,7 @@ export default function EntradasPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3" style={{ color: 'var(--text-secondary)' }}>
-                      {e.proveedor?.nombre ?? '—'}
+                      {e.proveedorNombre ?? '—'}
                     </td>
                     <td className="px-4 py-3" style={{ color: 'var(--text-secondary)' }}>
                       {e.usuario.nombre}

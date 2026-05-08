@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { Badge } from '@/components/ui/Badge'
 import { SkeletonCard } from '@/components/ui/Skeleton'
-import { formatCurrency, formatDateTime } from '@/lib/utils'
-import { ArrowDownToLine, ArrowUpFromLine, Package } from 'lucide-react'
+import { formatCurrency, formatDate, formatDateTime } from '@/lib/utils'
+import { ArrowDownToLine, ArrowLeftRight, Package } from 'lucide-react'
 import { motion } from 'framer-motion'
 
 interface Articulo {
@@ -16,6 +16,7 @@ interface Articulo {
   unidad: string
   descripcion?: string | null
   stockMinimo?: number | null
+  apartadoReservado: number
   lotesEntrada: Array<{
     id: string
     cantidadOriginal: number
@@ -26,8 +27,17 @@ interface Articulo {
     entrada: {
       fecha: string
       usuario: { nombre: string }
-      proveedor?: { nombre: string } | null
+      proveedorNombre?: string | null
     }
+  }>
+  movimientos: Array<{
+    id: string
+    cantidadMovida: number
+    notas?: string | null
+    createdAt: string
+    nivelOrigen: { nombre: string; ubicacion: { nombre: string } }
+    nivelDestino: { nombre: string; ubicacion: { nombre: string } }
+    usuario: { nombre: string }
   }>
 }
 
@@ -46,6 +56,8 @@ export default function ArticuloDetailPage() {
   if (!articulo) return <p style={{ color: 'var(--text-muted)' }}>Artículo no encontrado</p>
 
   const stockTotal = articulo.lotesEntrada.reduce((s, l) => s + l.cantidadDisponible, 0)
+  const reservado = articulo.apartadoReservado ?? 0
+  const stockDisponible = Math.max(0, stockTotal - reservado)
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -70,8 +82,13 @@ export default function ArticuloDetailPage() {
           <div className="text-right">
             <p className="text-xs uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>Stock disponible</p>
             <p className="font-mono-data text-3xl font-bold" style={{ color: 'var(--accent-primary)' }}>
-              {stockTotal}
+              {stockDisponible}
             </p>
+            {reservado > 0 && (
+              <p className="text-xs" style={{ color: 'var(--accent-warning)' }}>
+                {reservado} apartado · {stockTotal} total
+              </p>
+            )}
             <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{articulo.unidad}</p>
           </div>
         </div>
@@ -105,7 +122,7 @@ export default function ArticuloDetailPage() {
                   </div>
                   <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
                     Por {lote.entrada.usuario.nombre}
-                    {lote.entrada.proveedor && ` · ${lote.entrada.proveedor.nombre}`}
+                    {lote.entrada.proveedorNombre && ` · ${lote.entrada.proveedorNombre}`}
                   </p>
                 </div>
                 <div className="text-right">
@@ -121,6 +138,49 @@ export default function ArticuloDetailPage() {
           ))}
         </div>
       </div>
+      {/* Historial de movimientos */}
+      {articulo.movimientos?.length > 0 && (
+        <div>
+          <h3 className="font-display font-semibold text-sm uppercase tracking-widest mb-3"
+            style={{ color: 'var(--text-muted)' }}>
+            Historial de movimientos
+          </h3>
+          <div className="space-y-2">
+            {articulo.movimientos.map((mov, i) => (
+              <motion.div
+                key={mov.id}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.04 }}
+                className="card-industrial p-4"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <ArrowLeftRight size={14} style={{ color: 'var(--accent-primary)' }} />
+                      <span className="text-sm font-medium">{formatDate(mov.createdAt)}</span>
+                    </div>
+                    <p className="text-xs font-mono-data" style={{ color: 'var(--accent-primary)' }}>
+                      {mov.nivelOrigen.ubicacion.nombre}-{mov.nivelOrigen.nombre}
+                      {' → '}
+                      {mov.nivelDestino.ubicacion.nombre}-{mov.nivelDestino.nombre}
+                    </p>
+                    <p className="text-xs mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                      Por {mov.usuario.nombre}{mov.notas && ` · ${mov.notas}`}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-mono-data text-lg font-bold" style={{ color: 'var(--accent-primary)' }}>
+                      {mov.cantidadMovida}
+                    </p>
+                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{articulo.unidad}</p>
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

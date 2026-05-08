@@ -9,7 +9,8 @@ import { SkeletonCard } from '@/components/ui/Skeleton'
 import { formatDate } from '@/lib/utils'
 import { useSession } from 'next-auth/react'
 import { toast } from 'sonner'
-import { Plus, Trash2, AlertTriangle, Clock } from 'lucide-react'
+import { Plus, Trash2, AlertTriangle, Clock, Upload } from 'lucide-react'
+import { CSVUploader } from '@/components/csv/CSVUploader'
 import { addDays, differenceInDays, isPast } from 'date-fns'
 import { motion } from 'framer-motion'
 
@@ -30,6 +31,7 @@ export default function ApartadosPage() {
   const [apartados, setApartados] = useState<Apartado[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
+  const [csvOpen, setCsvOpen] = useState(false)
   const [articulos, setArticulos] = useState<any[]>([])
   const [proyectos, setProyectos] = useState<any[]>([])
   const [formItems, setFormItems] = useState([{ articuloId: '', cantidad: 1 }])
@@ -112,7 +114,15 @@ export default function ApartadosPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <h2 className="font-display text-lg font-semibold">Apartados activos</h2>
-        <Button size="sm" onClick={() => setShowForm(true)}><Plus size={14} /> Nuevo apartado</Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => setCsvOpen(true)}>
+            <Upload size={14} /> Cargar CSV
+          </Button>
+          <Button size="sm" onClick={() => setShowForm(true)}><Plus size={14} /> Nuevo apartado</Button>
+        </div>
+        {csvOpen && (
+          <CSVUploader tipo="apartado" onProcesado={fetchApartados} onClose={() => setCsvOpen(false)} />
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -171,7 +181,7 @@ export default function ApartadosPage() {
       <Modal open={showForm} onClose={() => setShowForm(false)} title="Nuevo apartado" size="lg">
         <div className="space-y-4">
           {/* Aviso de vencimiento */}
-          <div className="p-4 rounded-lg border" style={{ background: 'rgba(255,179,0,0.08)', borderColor: 'var(--accent-warning)' }}>
+          <div className="p-4 rounded-lg border" style={{ background: 'color-mix(in srgb, var(--accent-warning) 8%, transparent)', borderColor: 'var(--accent-warning)' }}>
             <div className="flex items-start gap-2">
               <AlertTriangle size={16} style={{ color: 'var(--accent-warning)', flexShrink: 0, marginTop: 2 }} />
               <div>

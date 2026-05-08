@@ -1,9 +1,9 @@
-﻿export const dynamic = 'force-dynamic'
+export const dynamic = 'force-dynamic'
 import { prisma } from '@/lib/prisma'
 import { requireAuth, getPaginationParams } from '@/lib/apiHelpers'
 import { SalidaSchema } from '@/lib/validations'
 import { errorResponse, successResponse } from '@/lib/utils'
-import { calcularFIFO } from '@/lib/fifo'
+import { calcularFIFO, descontarStockLote } from '@/lib/fifo'
 import { registrarAudit } from '@/lib/audit'
 import { Rol } from '@prisma/client'
 
@@ -68,18 +68,7 @@ export async function POST(req: Request) {
           },
         })
 
-        await tx.loteEntrada.update({
-          where: { id: fi.loteEntradaId },
-          data: { cantidadDisponible: { decrement: fi.cantidad } },
-        })
-
-        const lote = await tx.loteEntrada.findUnique({ where: { id: fi.loteEntradaId } })
-        if (lote?.ubicacionId) {
-          await tx.articuloUbicacion.updateMany({
-            where: { articuloId: lote.articuloId, ubicacionId: lote.ubicacionId },
-            data: { cantidad: { decrement: fi.cantidad } },
-          })
-        }
+        await descontarStockLote(tx, fi.loteEntradaId, fi.cantidad)
 
         if (fi.costoTotal) costoTotal += fi.costoTotal
       }
@@ -97,4 +86,3 @@ export async function POST(req: Request) {
 
   return successResponse(salida, 201)
 }
-

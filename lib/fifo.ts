@@ -52,3 +52,29 @@ export async function calcularFIFO(
     tieneLotesSinPrecio,
   }
 }
+
+export async function descontarStockLote(
+  tx: Parameters<Parameters<typeof prisma.$transaction>[0]>[0],
+  loteId: string,
+  cantidad: number
+) {
+  await tx.loteEntrada.update({
+    where: { id: loteId },
+    data: { cantidadDisponible: { decrement: cantidad } },
+  })
+
+  const lote = await tx.loteEntrada.findUnique({ where: { id: loteId } })
+  if (!lote) return
+
+  if (lote.nivelId) {
+    await tx.articuloNivel.updateMany({
+      where: { nivelId: lote.nivelId, articuloId: lote.articuloId },
+      data: { cantidad: { decrement: cantidad } },
+    })
+  } else if (lote.ubicacionId) {
+    await tx.articuloUbicacion.updateMany({
+      where: { articuloId: lote.articuloId, ubicacionId: lote.ubicacionId },
+      data: { cantidad: { decrement: cantidad } },
+    })
+  }
+}

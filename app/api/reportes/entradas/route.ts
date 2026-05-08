@@ -25,7 +25,6 @@ export async function GET(req: Request) {
     },
     include: {
       usuario: { select: { nombre: true } },
-      proveedor: { select: { nombre: true } },
       lotes: { include: { articulo: { select: { nombre: true, marca: true, unidad: true } } } },
     },
     orderBy: { fecha: 'desc' },
@@ -40,7 +39,7 @@ export async function GET(req: Request) {
       Unidad: l.articulo.unidad,
       'Precio unitario': l.precioUnitario ?? 'Sin precio',
       'Total lote': l.precioUnitario ? (l.cantidadOriginal * l.precioUnitario).toFixed(2) : '—',
-      Proveedor: e.proveedor?.nombre ?? '—',
+      Proveedor: e.proveedorNombre ?? '—',
       Almacenista: e.usuario.nombre,
     }))
   )
