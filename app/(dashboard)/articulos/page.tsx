@@ -12,7 +12,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ArticuloSchema } from '@/lib/validations'
 import { z } from 'zod'
-import { Plus, Search, Package, Bookmark } from 'lucide-react'
+import { Plus, Search, Bookmark } from 'lucide-react'
 import { UbicacionesBadge } from '@/components/articulos/UbicacionesBadge'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
@@ -182,13 +182,7 @@ export default function ArticulosPage() {
                     className="hover:bg-[var(--bg-tertiary)] transition-colors"
                   >
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded flex items-center justify-center"
-                          style={{ background: 'var(--bg-tertiary)' }}>
-                          <Package size={14} style={{ color: 'var(--text-muted)' }} />
-                        </div>
-                        <span className="font-medium">{a.nombre}</span>
-                      </div>
+                      <span className="font-medium">{a.nombre}</span>
                     </td>
                     <td className="px-4 py-3" style={{ color: 'var(--text-secondary)' }}>{a.marca ?? '—'}</td>
                     <td className="px-4 py-3 font-mono-data text-xs" style={{ color: 'var(--text-muted)' }}>

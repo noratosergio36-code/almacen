@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { UbicacionCard } from '@/components/almacen/UbicacionCard'
 import { UbicacionDetailModal } from '@/components/almacen/UbicacionDetailModal'
 import { SkeletonCard } from '@/components/ui/Skeleton'
@@ -16,6 +16,7 @@ import { z } from 'zod'
 import { Plus, Search } from 'lucide-react'
 
 type UbicacionForm = z.infer<typeof UbicacionSchema>
+type TipoSeparador = 'NINGUNO' | 'PASILLO' | 'MURO'
 
 interface ArticuloNivel {
   cantidad: number
@@ -39,15 +40,24 @@ interface Ubicacion {
   niveles: Nivel[]
 }
 
+const TIPOS: TipoSeparador[] = ['NINGUNO', 'PASILLO', 'MURO']
+const TIPO_LABELS: Record<TipoSeparador, string> = {
+  NINGUNO: 'Sin separador',
+  PASILLO: '— Pasillo',
+  MURO: '═ Muro',
+}
+
 export default function AlmacenPage() {
   const { data: session } = useSession()
   const rol = (session?.user as any)?.rol
   const [ubicaciones, setUbicaciones] = useState<Ubicacion[]>([])
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState<Ubicacion | null>(null)
+  const [selectedNivelId, setSelectedNivelId] = useState<string | null>(null)
   const [showForm, setShowForm] = useState(false)
   const [query, setQuery] = useState('')
   const [saving, setSaving] = useState(false)
+  const [separadores, setSeparadores] = useState<Record<string, TipoSeparador>>({})
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<UbicacionForm>({
     resolver: zodResolver(UbicacionSchema),
@@ -59,7 +69,25 @@ export default function AlmacenPage() {
     setLoading(false)
   }, [])
 
+  const fetchSeparadores = useCallback(async () => {
+    const res = await fetch('/api/separadores')
+    if (res.ok) {
+      const data: Array<{ prefix: string; tipo: TipoSeparador }> = await res.json()
+      setSeparadores(Object.fromEntries(data.map(s => [s.prefix, s.tipo])))
+    }
+  }, [])
+
   useEffect(() => { fetchUbicaciones() }, [fetchUbicaciones])
+  useEffect(() => { fetchSeparadores() }, [fetchSeparadores])
+
+  async function updateSeparador(prefix: string, tipo: TipoSeparador) {
+    setSeparadores(prev => ({ ...prev, [prefix]: tipo }))
+    await fetch('/api/separadores', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prefix, tipo }),
+    })
+  }
 
   async function crearUbicacion(data: UbicacionForm) {
     setSaving(true)
@@ -80,16 +108,31 @@ export default function AlmacenPage() {
     setSaving(false)
   }
 
-  const filtered = ubicaciones.filter((u) =>
-    u.nombre.toLowerCase().includes(query.toLowerCase())
-  )
+  const matchingNiveles = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return new Set<string>()
+    const s = new Set<string>()
+    for (const u of ubicaciones) {
+      for (const n of u.niveles) {
+        if (n.articuloNiveles.some(an =>
+          an.cantidad > 0 && (
+            an.articulo.nombre.toLowerCase().includes(q) ||
+            (an.articulo.marca?.toLowerCase().includes(q))
+          )
+        )) s.add(n.id)
+      }
+    }
+    return s
+  }, [ubicaciones, query])
 
-  const grupos = filtered.reduce<Record<string, Ubicacion[]>>((acc, u) => {
+  const grupos = ubicaciones.reduce<Record<string, Ubicacion[]>>((acc, u) => {
     const prefix = u.nombre[0]?.toUpperCase() ?? '#'
     if (!acc[prefix]) acc[prefix] = []
     acc[prefix].push(u)
     return acc
   }, {})
+
+  const sortedGrupos = Object.entries(grupos).sort() as [string, Ubicacion[]][]
 
   if (loading) {
     return (
@@ -100,7 +143,7 @@ export default function AlmacenPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center gap-3">
         <div className="flex-1 relative">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2"
@@ -108,7 +151,7 @@ export default function AlmacenPage() {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Buscar ubicación..."
+            placeholder="Buscar artículo, marca..."
             className="w-full pl-9 pr-3 py-2.5 rounded-md text-sm outline-none border"
             style={{
               background: 'var(--bg-secondary)',
@@ -124,43 +167,87 @@ export default function AlmacenPage() {
         )}
       </div>
 
-      {Object.entries(grupos).sort().map(([prefix, items]) => (
-        <div key={prefix}>
-          <div className="flex items-center gap-3 mb-3">
-            <span className="font-mono-data text-xs font-bold tracking-widest"
-              style={{ color: 'var(--text-muted)' }}>
-              PASILLO {prefix}
-            </span>
-            <div className="flex-1 h-px" style={{ background: 'var(--border)' }} />
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
-            {items.map((u, i) => (
-              <UbicacionCard
-                key={u.id}
-                id={u.id}
-                nombre={u.nombre}
-                descripcion={u.descripcion}
-                totalArticulos={u.totalArticulos}
-                totalStock={u.totalStock}
-                onClick={() => setSelected(u)}
-                index={i}
-              />
-            ))}
-          </div>
-        </div>
-      ))}
+      {sortedGrupos.map(([prefix, items], idx) => {
+        const prevPrefix = idx > 0 ? sortedGrupos[idx - 1][0] : null
+        const tipo: TipoSeparador = prevPrefix ? (separadores[prevPrefix] ?? 'NINGUNO') : 'NINGUNO'
 
-      {filtered.length === 0 && (
+        return (
+          <div key={prefix} className="space-y-3">
+            {/* Separador entre grupos */}
+            {prevPrefix && (
+              <div className="flex items-center gap-3 py-1">
+                <div className="flex-1">
+                  {tipo === 'PASILLO' && (
+                    <div className="border-t-2 border-dashed" style={{ borderColor: 'var(--border-active)' }} />
+                  )}
+                  {tipo === 'MURO' && (
+                    <div className="space-y-1.5">
+                      <div className="border-t-2 border-dashed" style={{ borderColor: 'var(--border-active)' }} />
+                      <div className="border-t-2 border-dashed" style={{ borderColor: 'var(--border-active)' }} />
+                    </div>
+                  )}
+                </div>
+                {rol === 'ADMIN' && (
+                  <div className="flex gap-1 flex-shrink-0">
+                    {TIPOS.map(t => (
+                      <button
+                        key={t}
+                        onClick={() => updateSeparador(prevPrefix, t)}
+                        className="px-2 py-0.5 rounded text-xs transition-colors"
+                        style={{
+                          background: tipo === t ? 'var(--accent-primary)' : 'var(--bg-tertiary)',
+                          color: tipo === t ? 'var(--text-on-accent)' : 'var(--text-muted)',
+                          border: `1px solid ${tipo === t ? 'var(--accent-primary)' : 'var(--border)'}`,
+                        }}
+                      >
+                        {TIPO_LABELS[t]}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Grilla de ubicaciones */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+              {items.map((u, i) => (
+                <UbicacionCard
+                  key={u.id}
+                  id={u.id}
+                  nombre={u.nombre}
+                  descripcion={u.descripcion}
+                  totalArticulos={u.totalArticulos}
+                  totalStock={u.totalStock}
+                  niveles={u.niveles}
+                  matchingNiveles={query.trim() ? matchingNiveles : undefined}
+                  onClick={() => { setSelectedNivelId(null); setSelected(u) }}
+                  onNivelClick={(nivelId) => { setSelectedNivelId(nivelId); setSelected(u) }}
+                  index={i}
+                />
+              ))}
+            </div>
+          </div>
+        )
+      })}
+
+      {ubicaciones.length === 0 && (
         <div className="text-center py-16" style={{ color: 'var(--text-muted)' }}>
           <p>No hay ubicaciones registradas</p>
+        </div>
+      )}
+
+      {query.trim() && matchingNiveles.size === 0 && (
+        <div className="text-center py-8" style={{ color: 'var(--text-muted)' }}>
+          <p className="text-sm">No se encontraron artículos que coincidan con "{query}"</p>
         </div>
       )}
 
       <UbicacionDetailModal
         ubicacion={selected}
         open={!!selected}
-        onClose={() => setSelected(null)}
+        onClose={() => { setSelected(null); setSelectedNivelId(null) }}
         onRefresh={fetchUbicaciones}
+        initialNivelId={selectedNivelId}
       />
 
       <Modal open={showForm} onClose={() => setShowForm(false)} title="Nueva ubicación" size="sm">

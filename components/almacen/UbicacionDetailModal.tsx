@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { QrCode, Image, Plus, Trash2, Bookmark, ArrowLeftRight } from 'lucide-react'
+import { QrCode, Plus, Trash2, Bookmark, ArrowLeftRight } from 'lucide-react'
 import NextImage from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useSession } from 'next-auth/react'
@@ -36,6 +36,7 @@ interface UbicacionDetailModalProps {
   open: boolean
   onClose: () => void
   onRefresh?: () => void
+  initialNivelId?: string | null
 }
 
 const selectStyle = {
@@ -44,7 +45,7 @@ const selectStyle = {
   color: 'var(--text-primary)',
 } as const
 
-export function UbicacionDetailModal({ ubicacion, open, onClose, onRefresh }: UbicacionDetailModalProps) {
+export function UbicacionDetailModal({ ubicacion, open, onClose, onRefresh, initialNivelId }: UbicacionDetailModalProps) {
   const { data: session } = useSession()
   const rol = (session?.user as any)?.rol
   const canEdit = rol === 'ADMIN' || rol === 'ALMACENISTA'
@@ -52,6 +53,10 @@ export function UbicacionDetailModal({ ubicacion, open, onClose, onRefresh }: Ub
   const [qrUrl, setQrUrl] = useState<string | null>(null)
   const [loadingQr, setLoadingQr] = useState(false)
   const [nivelSeleccionado, setNivelSeleccionado] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (open) setNivelSeleccionado(initialNivelId ?? null)
+  }, [open, initialNivelId])
   const [addingNivel, setAddingNivel] = useState(false)
 
   // Mover state
@@ -152,9 +157,9 @@ export function UbicacionDetailModal({ ubicacion, open, onClose, onRefresh }: Ub
 
   return (
     <>
-      <Modal open={open} onClose={onClose} title={`Ubicación ${ubicacion.nombre}`} size="lg">
-        <div className="space-y-4">
-          <div className="flex justify-end">
+      <Modal open={open} onClose={onClose} title={`Ubicación ${ubicacion.nombre}`} size="full">
+        <div className="flex flex-col h-full gap-3">
+          <div className="flex justify-end flex-shrink-0">
             <Button variant="outline" size="sm" onClick={generarQR} loading={loadingQr}>
               <QrCode size={14} />
               {qrUrl ? 'Ver QR' : 'Generar QR'}
@@ -162,15 +167,15 @@ export function UbicacionDetailModal({ ubicacion, open, onClose, onRefresh }: Ub
           </div>
 
           {qrUrl && (
-            <div className="flex justify-center p-4 rounded-lg" style={{ background: 'white' }}>
+            <div className="flex justify-center p-4 rounded-lg flex-shrink-0" style={{ background: 'white' }}>
               <NextImage src={qrUrl} alt="QR" width={200} height={200} />
             </div>
           )}
 
           {/* Dos paneles */}
-          <div className="flex rounded-lg overflow-hidden border" style={{ borderColor: 'var(--border)', minHeight: 320, maxHeight: '60vh' }}>
+          <div className="flex rounded-lg overflow-hidden border flex-1 min-h-0" style={{ borderColor: 'var(--border)' }}>
             {/* Panel izquierdo — Niveles */}
-            <div className="flex flex-col" style={{ width: 200, borderRight: '1px solid var(--border)', background: 'var(--bg-secondary)' }}>
+            <div className="flex flex-col flex-shrink-0" style={{ width: 160, borderRight: '1px solid var(--border)', background: 'var(--bg-secondary)' }}>
               <div className="px-3 py-2 text-xs uppercase tracking-widest font-medium"
                 style={{ color: 'var(--text-muted)', borderBottom: '1px solid var(--border)' }}>
                 Niveles
@@ -184,7 +189,7 @@ export function UbicacionDetailModal({ ubicacion, open, onClose, onRefresh }: Ub
                     <button
                       key={nivel.id}
                       onClick={() => setNivelSeleccionado(nivel.id)}
-                      className="w-full flex items-center gap-2 px-3 py-2.5 text-left text-sm transition-colors group"
+                      className="w-full flex items-center gap-2 px-3 py-2.5 text-left text-sm transition-colors"
                       style={{
                         background: activo ? 'var(--bg-tertiary)' : undefined,
                         borderLeft: activo ? '3px solid var(--accent-primary)' : '3px solid transparent',
@@ -196,16 +201,15 @@ export function UbicacionDetailModal({ ubicacion, open, onClose, onRefresh }: Ub
                       <span className="font-mono text-xs flex-1">
                         {ubicacion.nombre}-{nivel.nombre}
                       </span>
-                      <span className="text-xs" style={{ color: 'var(--text-muted)' }}>({totalArticulos})</span>
                       {!tieneStock && rol === 'ADMIN' && (
                         <button
                           onClick={(e) => { e.stopPropagation(); eliminarNivel(nivel.id) }}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity"
                           style={{ color: 'var(--accent-danger)' }}
                         >
                           <Trash2 size={11} />
                         </button>
                       )}
+                      <span className="text-xs" style={{ color: 'var(--text-muted)' }}>({totalArticulos})</span>
                     </button>
                   )
                 })}
@@ -219,89 +223,128 @@ export function UbicacionDetailModal({ ubicacion, open, onClose, onRefresh }: Ub
               )}
             </div>
 
-            {/* Panel derecho — Componentes */}
+            {/* Panel derecho — tabla de componentes */}
             <div className="flex-1 flex flex-col overflow-hidden">
-              <div className="px-4 py-2 text-xs uppercase tracking-widest font-medium"
+              <div className="px-4 py-2 text-xs uppercase tracking-widest font-medium flex items-center gap-2"
                 style={{ color: 'var(--text-muted)', borderBottom: '1px solid var(--border)' }}>
-                Componentes {nivelActual ? `— ${ubicacion.nombre}-${nivelActual.nombre}` : ''}
+                Componentes
+                {nivelActual && (
+                  <span className="font-mono-data" style={{ color: 'var(--accent-primary)' }}>
+                    — {ubicacion.nombre}-{nivelActual.nombre}
+                  </span>
+                )}
               </div>
-              <div className="flex-1 overflow-y-auto p-3 space-y-2">
+
+              <div className="flex-1 overflow-y-auto">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={nivelActualId}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    transition={{ duration: 0.15 }}
-                    className="space-y-2"
+                    transition={{ duration: 0.12 }}
                   >
                     {!nivelActual || nivelActual.articuloNiveles.filter(an => an.cantidad > 0).length === 0 ? (
-                      <p className="text-sm text-center py-8" style={{ color: 'var(--text-muted)' }}>
+                      <p className="text-sm text-center py-10" style={{ color: 'var(--text-muted)' }}>
                         Sin artículos en este nivel
                       </p>
                     ) : (
-                      nivelActual.articuloNiveles
-                        .filter(an => an.cantidad > 0)
-                        .map((an, i) => {
-                          const disponible = Math.max(0, an.cantidad - an.apartadoReservado)
-                          return (
-                            <div key={i} className="flex items-center gap-3 p-3 rounded-lg"
-                              style={{ background: 'var(--bg-tertiary)' }}>
-                              <div className="w-10 h-10 rounded flex items-center justify-center flex-shrink-0"
-                                style={{ background: 'var(--border)' }}>
-                                {an.articulo.fotoUrl ? (
-                                  <NextImage src={an.articulo.fotoUrl} alt="" width={40} height={40} className="rounded object-cover" />
-                                ) : (
-                                  <Image size={16} style={{ color: 'var(--text-muted)' }} />
-                                )}
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium truncate">{an.articulo.nombre}</p>
-                                {an.articulo.marca && (
-                                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{an.articulo.marca}</p>
-                                )}
-                                {an.apartadoReservado > 0 && (
-                                  <p className="text-xs mt-0.5" style={{ color: 'var(--accent-warning)' }}>
-                                    {an.apartadoReservado} apartado
-                                  </p>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-1">
-                                <div className="text-right">
-                                  <p className="font-mono-data text-lg font-bold" style={{ color: 'var(--accent-primary)' }}>
-                                    {disponible}
-                                  </p>
-                                  {an.apartadoReservado > 0 && (
-                                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                                      de {an.cantidad}
-                                    </p>
-                                  )}
-                                  <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{an.articulo.unidad}</p>
-                                </div>
-                                {disponible > 0 && (
-                                  <Button variant="ghost" size="sm" onClick={() => abrirApartar(an.articulo.id)} title="Apartar">
-                                    <Bookmark size={12} />
-                                  </Button>
-                                )}
-                                {canEdit && an.cantidad > 0 && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    title="Mover"
-                                    onClick={() => setMoverData({
-                                      articulo: { id: an.articulo.id, nombre: an.articulo.nombre, marca: an.articulo.marca ?? undefined },
-                                      cantidadTotal: an.cantidad,
-                                      cantidadApartada: an.apartadoReservado,
-                                    })}
-                                    style={{ color: 'var(--text-secondary)' }}
-                                  >
-                                    <ArrowLeftRight size={12} />
-                                  </Button>
-                                )}
-                              </div>
-                            </div>
-                          )
-                        })
+                      <table className="w-full text-sm border-collapse">
+                        <thead>
+                          <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-tertiary)' }}>
+                            <th className="text-left px-3 py-2 text-xs font-medium tracking-wider uppercase"
+                              style={{ color: 'var(--text-muted)' }}>Artículo</th>
+                            <th className="text-left px-3 py-2 text-xs font-medium tracking-wider uppercase"
+                              style={{ color: 'var(--text-muted)' }}>Marca</th>
+                            <th className="text-right px-3 py-2 text-xs font-medium tracking-wider uppercase"
+                              style={{ color: 'var(--text-muted)' }}>Apartado</th>
+                            <th className="text-right px-3 py-2 text-xs font-medium tracking-wider uppercase"
+                              style={{ color: 'var(--text-muted)' }}>Disponible</th>
+                            <th className="text-left px-3 py-2 text-xs font-medium tracking-wider uppercase"
+                              style={{ color: 'var(--text-muted)' }}>Unidad</th>
+                            <th className="px-3 py-2" style={{ width: 72 }} />
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {nivelActual.articuloNiveles
+                            .filter(an => an.cantidad > 0)
+                            .map((an, i) => {
+                              const disponible = Math.max(0, an.cantidad - an.apartadoReservado)
+                              return (
+                                <tr
+                                  key={i}
+                                  style={{
+                                    borderBottom: '1px solid var(--border)',
+                                    background: i % 2 === 0 ? 'var(--bg-primary)' : 'var(--bg-secondary)',
+                                  }}
+                                >
+                                  {/* Nombre */}
+                                  <td className="px-3 py-2.5">
+                                    <span className="font-medium truncate block max-w-[180px]" title={an.articulo.nombre}>
+                                      {an.articulo.nombre}
+                                    </span>
+                                  </td>
+                                  {/* Marca */}
+                                  <td className="px-3 py-2.5" style={{ color: 'var(--text-muted)' }}>
+                                    {an.articulo.marca ?? '—'}
+                                  </td>
+                                  {/* Apartado */}
+                                  <td className="px-3 py-2.5 text-right">
+                                    {an.apartadoReservado > 0 ? (
+                                      <span className="font-mono-data text-xs font-medium"
+                                        style={{ color: 'var(--accent-warning)' }}>
+                                        {an.apartadoReservado}
+                                      </span>
+                                    ) : (
+                                      <span style={{ color: 'var(--text-muted)' }}>—</span>
+                                    )}
+                                  </td>
+                                  {/* Disponible */}
+                                  <td className="px-3 py-2.5 text-right">
+                                    <span className="font-mono-data font-bold"
+                                      style={{ color: 'var(--accent-primary)', fontSize: 15 }}>
+                                      {disponible}
+                                    </span>
+                                    {an.apartadoReservado > 0 && (
+                                      <span className="block text-xs" style={{ color: 'var(--text-muted)' }}>
+                                        de {an.cantidad}
+                                      </span>
+                                    )}
+                                  </td>
+                                  {/* Unidad */}
+                                  <td className="px-3 py-2.5 text-xs" style={{ color: 'var(--text-muted)' }}>
+                                    {an.articulo.unidad}
+                                  </td>
+                                  {/* Acciones */}
+                                  <td className="px-2 py-2.5">
+                                    <div className="flex items-center gap-0.5 justify-end">
+                                      {disponible > 0 && (
+                                        <Button variant="ghost" size="sm" onClick={() => abrirApartar(an.articulo.id)} title="Apartar">
+                                          <Bookmark size={12} />
+                                        </Button>
+                                      )}
+                                      {canEdit && an.cantidad > 0 && (
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          title="Mover"
+                                          onClick={() => setMoverData({
+                                            articulo: { id: an.articulo.id, nombre: an.articulo.nombre, marca: an.articulo.marca ?? undefined },
+                                            cantidadTotal: an.cantidad,
+                                            cantidadApartada: an.apartadoReservado,
+                                          })}
+                                          style={{ color: 'var(--text-secondary)' }}
+                                        >
+                                          <ArrowLeftRight size={12} />
+                                        </Button>
+                                      )}
+                                    </div>
+                                  </td>
+                                </tr>
+                              )
+                            })}
+                        </tbody>
+                      </table>
                     )}
                   </motion.div>
                 </AnimatePresence>

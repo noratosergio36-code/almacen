@@ -1,25 +1,25 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 export function useLocalStorage<T>(
   key: string,
   initialValue: T,
 ): [T, (value: T | ((prev: T) => T)) => void] {
-  const [storedValue, setStoredValue] = useState<T>(() => {
-    if (typeof window === 'undefined') return initialValue
+  // Always match the server render — sync from localStorage after mount
+  const [storedValue, setStoredValue] = useState<T>(initialValue)
+
+  useEffect(() => {
     try {
       const item = window.localStorage.getItem(key)
-      return item !== null ? (JSON.parse(item) as T) : initialValue
-    } catch {
-      return initialValue
-    }
-  })
+      if (item !== null) setStoredValue(JSON.parse(item) as T)
+    } catch {}
+  }, [key])
 
   function setValue(value: T | ((prev: T) => T)) {
     const next = value instanceof Function ? value(storedValue) : value
     setStoredValue(next)
-    if (typeof window !== 'undefined') {
+    try {
       window.localStorage.setItem(key, JSON.stringify(next))
-    }
+    } catch {}
   }
 
   return [storedValue, setValue]

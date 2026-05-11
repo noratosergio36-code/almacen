@@ -332,6 +332,15 @@
 }
 
 
+/* Resaltado de búsqueda en almacén */
+@keyframes tile-match {
+  0%, 100% { background: color-mix(in srgb, var(--accent-primary) 18%, var(--bg-tertiary)); }
+  50%       { background: color-mix(in srgb, var(--accent-primary) 32%, var(--bg-tertiary)); }
+}
+.tile-match {
+  animation: tile-match 1.4s ease-in-out infinite;
+}
+
 /* Sonner toast overrides */
 [data-sonner-toaster] {
   --normal-bg: var(--bg-tertiary) !important;

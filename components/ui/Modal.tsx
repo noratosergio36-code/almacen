@@ -9,7 +9,7 @@ interface ModalProps {
   onClose: () => void
   title?: string
   children: React.ReactNode
-  size?: 'sm' | 'md' | 'lg' | 'xl'
+  size?: 'sm' | 'md' | 'lg' | 'xl' | 'full'
 }
 
 const sizes = {
@@ -17,6 +17,7 @@ const sizes = {
   md: 'max-w-lg',
   lg: 'max-w-2xl',
   xl: 'max-w-4xl',
+  full: 'w-full h-full',
 }
 
 export function Modal({ open, onClose, title, children, size = 'md' }: ModalProps) {
@@ -46,14 +47,18 @@ export function Modal({ open, onClose, title, children, size = 'md' }: ModalProp
       onClick={(e) => { if (e.target === overlayRef.current) onClose() }}
     >
       <div
-        className={cn('w-full rounded-xl shadow-2xl', sizes[size])}
+        className={cn(
+          'w-full rounded-xl shadow-2xl',
+          size === 'full' ? 'flex flex-col' : '',
+          sizes[size],
+        )}
         style={{
           background: 'var(--bg-secondary)',
           border: '1px solid var(--border-active)',
         }}
       >
         {title && (
-          <div className="flex items-center justify-between px-6 py-4"
+          <div className="flex items-center justify-between px-6 py-4 flex-shrink-0"
             style={{ borderBottom: '1px solid var(--border)' }}>
             <h2 className="font-display text-lg font-semibold tracking-wide">{title}</h2>
             <button onClick={onClose} className="p-1 rounded hover:bg-[var(--bg-tertiary)] transition-colors">
@@ -61,7 +66,7 @@ export function Modal({ open, onClose, title, children, size = 'md' }: ModalProp
             </button>
           </div>
         )}
-        <div className="p-6">{children}</div>
+        <div className={cn('p-6', size === 'full' ? 'flex-1 overflow-hidden' : '')}>{children}</div>
       </div>
     </div>
   )

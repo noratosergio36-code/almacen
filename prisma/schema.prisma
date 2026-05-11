@@ -34,6 +34,12 @@ enum TipoNotificacion {
   MOVIMIENTO_COMPONENTE
 }
 
+enum TipoSeparador {
+  NINGUNO
+  PASILLO
+  MURO
+}
+
 model Usuario {
   id               String   @id @default(cuid())
   nombre           String
@@ -64,7 +70,7 @@ model Ubicacion {
   descripcion  String?
   qrCode       String?
   activa       Boolean  @default(true)
-  nivelesCount Int      @default(1)
+  nivelesCount Int      @default(6)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -300,6 +306,14 @@ model AuditLog {
   @@index([usuarioId])
   @@index([entidad, entidadId])
   @@index([createdAt])
+}
+
+model SeparadorFila {
+  id     String        @id @default(cuid())
+  prefix String        @unique
+  tipo   TipoSeparador @default(NINGUNO)
+
+  @@map("separador_fila")
 }
 
 model Movimiento {
